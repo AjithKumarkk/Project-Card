@@ -10,6 +10,7 @@ public class GameController : MonoBehaviour
     public CardPool pool;
 
     public ScoreManager scoreManager;
+    public AudioManager audioManager;
 
     public TMP_Text scoreText;
     public TMP_Text pairsLeftText;
@@ -54,6 +55,7 @@ public class GameController : MonoBehaviour
             card.OnRevealed += (c) =>
             {
                 matchManager.EnqueueWhenRevealed(c);
+                audioManager?.PlayFlip();
             };
 
         }
@@ -71,13 +73,18 @@ public class GameController : MonoBehaviour
             scoreManager?.RegisterMatch();
             matched++;
             UpdatePairsText();
+            audioManager?.PlayMatch();
         }
         else
         {
-            // mismatch handling (MatchManager will hide them after its mismatch delay)
+            audioManager?.PlayMismatch();
         }
 
         UpdateScoreUI();
+        if (matched >= totalPairs)
+        {
+            audioManager?.PlayGameComplete();
+        }
     }
 
     IEnumerator PreviewFlipRoutine()
