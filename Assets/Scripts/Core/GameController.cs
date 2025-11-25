@@ -1,5 +1,7 @@
+using System.Collections;
 using UnityEngine;
-using System.Collections.Generic;
+using UnityEngine.EventSystems;
+using TMPro;
 
 public class GameController : MonoBehaviour
 {
@@ -7,12 +9,19 @@ public class GameController : MonoBehaviour
     public MatchManager matchManager;
     public CardPool pool;
 
+    public ScoreManager scoreManager;
+
+    public TMP_Text scoreText;
+    public TMP_Text pairsLeftText;
+
     public int rows = 4;
     public int cols = 4;
     public int seed = 0;
 
     int totalPairs = 0;
     int matched = 0;
+
+    public float previewSeconds = 2f;
 
     void Start()
     {
@@ -23,29 +32,98 @@ public class GameController : MonoBehaviour
     {
         matched = 0;
         totalPairs = (rows * cols) / 2;
+
         matchManager.ResetAll();
+        scoreManager?.ResetScore();
+
         grid.MakeGrid(rows, cols, seed);
 
-        // wire card events
+        matchManager.OnPairResolved = null;
+        matchManager.OnPairResolved = OnPairResolved;
+
         foreach (var card in grid.ActiveCards)
         {
-            // clear old callbacks
             card.OnRevealed = null;
             card.OnHidden = null;
             card.OnMatched = null;
 
-            card.OnRevealed += (c) => {
+
+            var et = card.GetComponent<EventTrigger>();
+            if (et != null) et.enabled = false;
+
+            card.OnRevealed += (c) =>
+            {
                 matchManager.EnqueueWhenRevealed(c);
             };
 
-            card.OnMatched += (c) => {
-                matched++;
-                Debug.Log("Matched: " + matched + "/" + totalPairs);
-                if (matched >= totalPairs)
-                {
-                    Debug.Log("Game finished!");
-                }
-            };
+        }
+
+        StartCoroutine(PreviewFlipRoutine());
+
+        UpdateScoreUI();
+        UpdatePairsText();
+    }
+
+    private void OnPairResolved(Card a, Card b, bool isMatch)
+    {
+        if (isMatch)
+        {
+            scoreManager?.RegisterMatch();
+            matched++;
+            UpdatePairsText();
+        }
+        else
+        {
+            // mismatch handling (MatchManager will hide them after its mismatch delay)
+        }
+
+        UpdateScoreUI();
+    }
+
+    IEnumerator PreviewFlipRoutine()
+    {
+        // 1) Reveal all cards
+        foreach (var card in grid.ActiveCards)
+        {
+            card.Reveal();
+        }
+
+        // 2) Wait for preview time
+        yield return new WaitForSeconds(previewSeconds);
+
+        // 3) Hide all cards
+        foreach (var card in grid.ActiveCards)
+        {
+            card.Hide();
+        }
+
+        // 4) Wait a bit for hide animations to finish
+        yield return new WaitForSeconds(0.25f);
+
+        // 5) Re-enable EventTriggers 
+        foreach (var card in grid.ActiveCards)
+        {
+            var et = card.GetComponent<EventTrigger>();
+            if (et != null) et.enabled = true;
+        }
+
+        matchManager.ResetAll();
+
+        Debug.Log("Preview finished. Game started!");
+    }
+
+    void UpdateScoreUI()
+    {
+        if (scoreText != null)
+            scoreText.text = "Score: " + (scoreManager != null ? scoreManager.GetScore().ToString() : "0");
+    }
+
+    void UpdatePairsText()
+    {
+        if (pairsLeftText != null)
+        {
+            int remaining = Mathf.Max(0, totalPairs - matched);
+            pairsLeftText.text = $"Pairs left: {remaining}";
         }
     }
 }

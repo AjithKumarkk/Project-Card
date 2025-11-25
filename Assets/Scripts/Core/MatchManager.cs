@@ -37,6 +37,7 @@ public class MatchManager : MonoBehaviour
             {
                 a.MarkMatched();
                 b.MarkMatched();
+                StartCoroutine(RemoveMatchedCards(a, b));
                 OnPairResolved?.Invoke(a, b, true);
             }
             else
@@ -68,4 +69,25 @@ public class MatchManager : MonoBehaviour
         pendingHide.Clear();
         running = false;
     }
+    IEnumerator RemoveMatchedCards(Card a, Card b)
+    {
+        // small pause for match animation (optional)
+        yield return new WaitForSeconds(0.45f);
+
+        // Find the pool
+        CardPool pool = FindObjectOfType<CardPool>();
+
+        if (pool != null)
+        {
+            pool.Return(a);
+            pool.Return(b);
+        }
+        else
+        {
+            // fallback: destroy
+            Destroy(a.gameObject);
+            Destroy(b.gameObject);
+        }
+    }
+
 }
