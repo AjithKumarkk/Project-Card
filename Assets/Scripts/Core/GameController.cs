@@ -15,9 +15,16 @@ public class GameController : MonoBehaviour
     public TMP_Text scoreText;
     public TMP_Text pairsLeftText;
 
+    [Header("Random layout settings")]
+    public bool randomizeOnStart = true;
+    public int minRows = 2;
+    public int maxRows = 5;
+    public int minCols = 2;
+    public int maxCols = 6;
     public int rows = 4;
     public int cols = 4;
     public int seed = 0;
+    public int maxTotalCells = 30;
 
     int totalPairs = 0;
     int matched = 0;
@@ -26,8 +33,57 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
+        if (randomizeOnStart)
+            StartNewRandomGame();
+        else
+            StartNewGame();
+    }
+    void PickRandomLayout(out int pickRows, out int pickCols)
+    {
+        System.Random rng = new System.Random();
+
+        int r = rng.Next(minRows, maxRows + 1);
+        int c = rng.Next(minCols, maxCols + 1);
+
+        if (r * c > maxTotalCells)
+        {
+            while (r * c > maxTotalCells && c > minCols) c--;
+            while (r * c > maxTotalCells && r > minRows) r--;
+        }
+
+        if ((r * c) % 2 != 0)
+        {
+            if (c > minCols) c--;
+            else if (r > minRows) r--;
+            else
+            {
+                if (c < maxCols) c++;
+                else if (r < maxRows) r++;
+            }
+        }
+
+        r = Mathf.Clamp(r, minRows, maxRows);
+        c = Mathf.Clamp(c, minCols, maxCols);
+        if ((r * c) % 2 != 0)
+        {
+            c = Mathf.Max(minCols, c - 1);
+        }
+
+        pickRows = r;
+        pickCols = c;
+    }
+
+    public void StartNewRandomGame()
+    {
+        int r, c;
+        PickRandomLayout(out r, out c);
+
+        rows = r;
+        cols = c;
+
         StartNewGame();
     }
+
 
     public void StartNewGame()
     {
@@ -116,7 +172,6 @@ public class GameController : MonoBehaviour
 
         matchManager.ResetAll();
 
-        Debug.Log("Preview finished. Game started!");
     }
 
     void UpdateScoreUI()

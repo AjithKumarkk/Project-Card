@@ -585,7 +585,7 @@ MonoBehaviour:
   pairsLeftText: {fileID: 1841711809}
   rows: 4
   cols: 4
-  seed: 1234
+  seed: 0
   previewSeconds: 2
 --- !u!4 &1154106690
 Transform:
