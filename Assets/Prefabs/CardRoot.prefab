@@ -216,7 +216,7 @@ MonoBehaviour:
   id: 1
   frontImage: {fileID: 919523141044659778}
   backImage: {fileID: 8998373188816212839}
-  flipDuration: 0.18
+  flipTime: 0.18
 --- !u!114 &5943971438916146771
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -236,7 +236,7 @@ MonoBehaviour:
         m_Calls:
         - m_Target: {fileID: 6881534532170576389}
           m_TargetAssemblyTypeName: Card, Assembly-CSharp
-          m_MethodName: OnClick
+          m_MethodName: OnClicked
           m_Mode: 1
           m_Arguments:
             m_ObjectArgument: {fileID: 0}

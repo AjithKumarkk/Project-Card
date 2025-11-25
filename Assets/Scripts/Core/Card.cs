@@ -3,87 +3,52 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(RectTransform))]
+// Simple UI card: front/back images, flip animation, basic events.
 public class Card : MonoBehaviour
 {
-    public int id;
-    public Image frontImage; 
-    public Image backImage; 
-    public float flipDuration = 0.18f;
+    public int id = -1;
+    public Image frontImage;
+    public Image backImage;
+    public float flipTime = 0.18f;
+
+    // Simple callbacks you can set from other scripts
+    public Action<Card> OnRevealed;
+    public Action<Card> OnHidden;
+    public Action<Card> OnMatched;
 
     public bool IsRevealed { get; private set; }
     public bool IsMatched { get; private set; }
 
-    public event Action<Card> OnRevealed;
-    public event Action<Card> OnHidden;
-    public event Action<Card> OnMatched;
+    bool _animating = false;
 
-    private bool animating = false;
-
-    private void Reset()
-    {
-        frontImage = transform.Find("Front")?.GetComponent<Image>();
-        backImage = transform.Find("Back")?.GetComponent<Image>();
-    }
-
-    public void SetFaceSprite(Sprite s)
-    {
-        if (frontImage) frontImage.sprite = s;
-    }
-
-    public void SetBackSprite(Sprite s)
-    {
-        if (backImage) backImage.sprite = s;
-    }
-
-    public void SetMatched()
-    {
-        if (IsMatched) return;
-        IsMatched = true;
-        StopAllCoroutines();
-        animating = false;
-        StartCoroutine(MatchedScaleAnim());
-        OnMatched?.Invoke(this);
-    }
-
-    private IEnumerator MatchedScaleAnim()
-    {
-        float t = 0f;
-        Vector3 start = transform.localScale;
-        Vector3 target = start * 1.12f;
-        while (t < 0.12f)
-        {
-            t += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(start, target, t / 0.12f);
-            yield return null;
-        }
-        t = 0f;
-        while (t < 0.12f)
-        {
-            t += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(target, start, t / 0.12f);
-            yield return null;
-        }
-    }
-
+    // Show front (with small flip)
     public void Reveal()
     {
-        if (IsMatched || IsRevealed || animating) return;
-        StartCoroutine(FlipToFront());
+        if (IsMatched || IsRevealed || _animating) return;
+        StartCoroutine(DoFlip(true));
     }
 
     public void Hide()
     {
-        if (IsMatched || !IsRevealed || animating) return;
-        StartCoroutine(FlipToBack());
+        if (IsMatched || !IsRevealed || _animating) return;
+        StartCoroutine(DoFlip(false));
     }
 
-    private IEnumerator FlipToFront()
+    // Mark matched (keeps front shown)
+    public void MarkMatched()
     {
-        animating = true;
-        float half = flipDuration / 2f;
-        float t = 0f;
+        IsMatched = true;
+        OnMatched?.Invoke(this);
+    }
+
+    IEnumerator DoFlip(bool toFront)
+    {
+        _animating = true;
+        float half = flipTime / 2f;
         Vector3 start = transform.localScale;
+
+        // shrink X
+        float t = 0f;
         while (t < half)
         {
             t += Time.deltaTime;
@@ -92,9 +57,23 @@ public class Card : MonoBehaviour
             yield return null;
         }
 
-        if (backImage) backImage.gameObject.SetActive(false);
-        if (frontImage) frontImage.gameObject.SetActive(true);
+        // swap images
+        if (toFront)
+        {
+            if (backImage) backImage.gameObject.SetActive(false);
+            if (frontImage) frontImage.gameObject.SetActive(true);
+            IsRevealed = true;
+            OnRevealed?.Invoke(this);
+        }
+        else
+        {
+            if (frontImage) frontImage.gameObject.SetActive(false);
+            if (backImage) backImage.gameObject.SetActive(true);
+            IsRevealed = false;
+            OnHidden?.Invoke(this);
+        }
 
+        // expand X
         t = 0f;
         while (t < half)
         {
@@ -105,59 +84,27 @@ public class Card : MonoBehaviour
         }
 
         transform.localScale = start;
-        IsRevealed = true;
-        animating = false;
-        OnRevealed?.Invoke(this);
+        _animating = false;
     }
 
-    private IEnumerator FlipToBack()
-    {
-        animating = true;
-        float half = flipDuration / 2f;
-        float t = 0f;
-        Vector3 start = transform.localScale;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            float s = Mathf.Lerp(1f, 0f, t / half);
-            transform.localScale = new Vector3(s, start.y, start.z);
-            yield return null;
-        }
-
-        if (frontImage) frontImage.gameObject.SetActive(false);
-        if (backImage) backImage.gameObject.SetActive(true);
-
-        t = 0f;
-        while (t < half)
-        {
-            t += Time.deltaTime;
-            float s = Mathf.Lerp(0f, 1f, t / half);
-            transform.localScale = new Vector3(s, start.y, start.z);
-            yield return null;
-        }
-
-        transform.localScale = start;
-        IsRevealed = false;
-        animating = false;
-        OnHidden?.Invoke(this);
-    }
-
-    // Called by UI Button or EventTrigger
-    public void OnClick()
-    {
-        if (IsMatched || animating) return;
-        Reveal();
-    }
-
-    // Safety: reset visuals for reuse
+    // reset for reuse
     public void ResetState()
     {
         StopAllCoroutines();
-        IsMatched = false;
         IsRevealed = false;
-        animating = false;
+        IsMatched = false;
+        _animating = false;
         if (frontImage) frontImage.gameObject.SetActive(false);
         if (backImage) backImage.gameObject.SetActive(true);
         transform.localScale = Vector3.one;
+        OnRevealed = null;
+        OnHidden = null;
+        OnMatched = null;
+    }
+
+    // helper to be called from Button onClick
+    public void OnClicked()
+    {
+        Reveal();
     }
 }
