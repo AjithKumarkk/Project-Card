@@ -4,13 +4,11 @@ using UnityEngine;
 public class CardPool : MonoBehaviour
 {
     public Card cardPrefab;
-    public Transform poolRoot; // assign "pools" transform
-
+    public Transform poolRoot; 
     List<Card> pool = new List<Card>();
 
     void Awake()
     {
-        // ensure poolRoot exists
         if (poolRoot == null) poolRoot = this.transform;
     }
 
@@ -26,10 +24,10 @@ public class CardPool : MonoBehaviour
             return c;
         }
 
-        // instantiate under poolRoot first and keep it inactive until returned/used
+        
         var instGO = Instantiate(cardPrefab.gameObject, poolRoot);
         instGO.name = cardPrefab.gameObject.name + "_clone";
-        instGO.SetActive(false);           // IMPORTANT: start inactive
+        instGO.SetActive(false);          
         c = instGO.GetComponent<Card>();
         c.ResetState();
         return c;

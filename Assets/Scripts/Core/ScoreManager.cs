@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class ScoreManager : MonoBehaviour
 {
-    public float comboWindow = 2f; // time allowed between matches
+    public float comboWindow = 2f;
 
     int score = 0;
     int combo = 0;
@@ -23,17 +23,14 @@ public class ScoreManager : MonoBehaviour
     {
         float now = Time.time;
 
-        // Check if this is a combo
+       
         if (now - lastMatchTime <= comboWindow)
-            combo++;    // combo increases
+            combo++;   
         else
-            combo = 1; // first match in chain
+            combo = 1; 
 
         lastMatchTime = now;
 
-        // Scoring rules:
-        // combo == 1 → normal → +2
-        // combo >= 2 → combo → +4
         int gained = (combo == 1) ? 2 : 4;
 
         score += gained;

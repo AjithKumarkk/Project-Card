@@ -3,7 +3,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Simple UI card: front/back images, flip animation, basic events.
 public class Card : MonoBehaviour
 {
     public int id = -1;
@@ -11,7 +10,6 @@ public class Card : MonoBehaviour
     public Image backImage;
     public float flipTime = 0.18f;
 
-    // Simple callbacks you can set from other scripts
     public Action<Card> OnRevealed;
     public Action<Card> OnHidden;
     public Action<Card> OnMatched;
@@ -20,8 +18,6 @@ public class Card : MonoBehaviour
     public bool IsMatched { get; private set; }
 
     bool _animating = false;
-
-    // Show front (with small flip)
     public void Reveal()
     {
         if (IsMatched || IsRevealed || _animating) return;
@@ -34,7 +30,6 @@ public class Card : MonoBehaviour
         StartCoroutine(DoFlip(false));
     }
 
-    // Mark matched (keeps front shown)
     public void MarkMatched()
     {
         IsMatched = true;
@@ -47,7 +42,6 @@ public class Card : MonoBehaviour
         float half = flipTime / 2f;
         Vector3 start = transform.localScale;
 
-        // shrink X
         float t = 0f;
         while (t < half)
         {
@@ -57,7 +51,6 @@ public class Card : MonoBehaviour
             yield return null;
         }
 
-        // swap images
         if (toFront)
         {
             if (backImage) backImage.gameObject.SetActive(false);
@@ -73,7 +66,6 @@ public class Card : MonoBehaviour
             OnHidden?.Invoke(this);
         }
 
-        // expand X
         t = 0f;
         while (t < half)
         {
@@ -87,7 +79,6 @@ public class Card : MonoBehaviour
         _animating = false;
     }
 
-    // reset for reuse
     public void ResetState()
     {
         StopAllCoroutines();
@@ -102,7 +93,6 @@ public class Card : MonoBehaviour
         OnMatched = null;
     }
 
-    // helper to be called from Button onClick
     public void OnClicked()
     {
         Reveal();

@@ -5,7 +5,7 @@ using System;
 public class MatchManager : MonoBehaviour
 {
     public float mismatchDelay = 0.6f;
-    public Action<Card, Card, bool> OnPairResolved; // a,b,isMatch
+    public Action<Card, Card, bool> OnPairResolved;
 
     Queue<Card> queue = new Queue<Card>();
     List<Card> pendingHide = new List<Card>();
@@ -71,10 +71,8 @@ public class MatchManager : MonoBehaviour
     }
     IEnumerator RemoveMatchedCards(Card a, Card b)
     {
-        // small pause for match animation (optional)
         yield return new WaitForSeconds(0.45f);
 
-        // Find the pool
         CardPool pool = FindObjectOfType<CardPool>();
 
         if (pool != null)
@@ -84,7 +82,6 @@ public class MatchManager : MonoBehaviour
         }
         else
         {
-            // fallback: destroy
             Destroy(a.gameObject);
             Destroy(b.gameObject);
         }

@@ -2,10 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Simple grid spawner for UI cards inside a RectTransform container.
 public class GridLayoutManager : MonoBehaviour
 {
-    public RectTransform container; // must be under Canvas
+    public RectTransform container; 
     public CardPool pool;
     public Sprite backSprite;
     public List<Sprite> faceSprites = new List<Sprite>();
@@ -14,10 +13,8 @@ public class GridLayoutManager : MonoBehaviour
     List<Card> active = new List<Card>();
     public List<Card> ActiveCards => active;
 
-    // Make grid: rows x cols
     public void MakeGrid(int rows, int cols, int seed = 0)
     {
-        // return old cards
         if (pool != null) pool.ReturnAll(active);
         active.Clear();
 
@@ -28,7 +25,6 @@ public class GridLayoutManager : MonoBehaviour
         int pairs = total / 2;
         for (int i = 0; i < pairs; i++) { ids.Add(i); ids.Add(i); }
 
-        // shuffle
         System.Random r = seed == 0 ? new System.Random() : new System.Random(seed);
         for (int i = ids.Count - 1; i > 0; i--)
         {
@@ -56,7 +52,7 @@ public class GridLayoutManager : MonoBehaviour
                 if (idx >= ids.Count) break;
                 var card = pool.Get();
                 card.transform.SetParent(container, false);
-                card.gameObject.SetActive(true); // newly spawned cards from pool may still be inactive
+                    card.gameObject.SetActive(true);
 
                 RectTransform rt = card.GetComponent<RectTransform>();
                 rt.sizeDelta = new Vector2(size, size);
