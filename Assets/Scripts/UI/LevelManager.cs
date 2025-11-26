@@ -1,68 +1,59 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class LevelManager : MonoBehaviour
 {
-    public GridLayoutManager grid;      
-    public MatchManager matchManager;   
-    public MenuManager menuManager;     
-    public Button returnButton;         
-    public TMP_Text levelTitleText;    
+    public GridLayoutManager grid;
+    public MatchManager matchManager;
+    public Button nextLevelButton;
 
     int currentLevel = 1;
 
-    private void Start()
+    void Start()
     {
-        if (menuManager == null) menuManager = FindObjectOfType<MenuManager>();
+        currentLevel = Mathf.Max(1, GameSession.selectedLevel);
 
-        if (returnButton != null)
+        if (nextLevelButton != null)
         {
-            returnButton.onClick.RemoveAllListeners();
-            returnButton.onClick.AddListener(() =>
-            {
-                menuManager?.ReturnToMenu();
-            });
+            nextLevelButton.onClick.RemoveAllListeners();
+            nextLevelButton.onClick.AddListener(OnNextLevelPressed);
+            nextLevelButton.gameObject.SetActive(false);
         }
+        StartLevel(currentLevel);
     }
 
     public void StartLevel(int level)
     {
         currentLevel = level;
-        // if (levelTitleText != null) levelTitleText.text = $"Level {level}";
 
-        int rows = 2;
-        int cols = 2;
-
-        switch (level)
-        {
-            case 1: rows = 2; cols = 2; break;
-            case 2: rows = 2; cols = 3; break;
-            case 3: rows = 2; cols = 4; break;
-            case 4: rows = 3; cols = 4; break;
-            case 5: rows = 3; cols = 4; break;
-            case 6: rows = 4; cols = 4; break;
-            case 7: rows = 4; cols = 5; break;
-            case 8: rows = 4; cols = 5; break;
-            case 9: rows = 5; cols = 6; break;
-            case 10: rows = 5; cols = 6; break;
-            default:
-                rows = Mathf.Clamp(2 + level/3, 2, 5);
-                cols = Mathf.Clamp(2 + level/2, 2, 6);
-                break;
-        }
-
-        grid.MakeGrid(rows, cols, seed: level); 
+        grid.ClearGrid();
         matchManager.ResetAll();
 
-        matchManager.OnPairResolved = (a, b, isMatch) =>
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
+
+        int rows = Random.Range(2, 5);
+        int cols = Random.Range(2, 6);
+        int total = rows * cols;
+        if (total % 2 != 0)
         {
-            CheckLevelComplete();
-        };
+            if (cols < 6) cols++;
+            else cols--;
+        }
+
+        grid.MakeGrid(rows, cols, seed: level);
+
+        var gc = FindObjectOfType<GameController>();
+        if (gc != null)
+        {
+            gc.rows = rows;
+            gc.cols = cols;
+            gc.seed = level;
+            gc.OnGridReady();
+        }
     }
 
-    private void CheckLevelComplete()
+    void CheckLevelComplete()
     {
         bool allMatched = true;
         foreach (var c in grid.ActiveCards)
@@ -76,17 +67,30 @@ public class LevelManager : MonoBehaviour
 
         if (allMatched)
         {
-            OnCompleteLevel();
+            HandleLevelComplete();
         }
     }
 
-    public void OnCompleteLevel()
+    public void HandleLevelComplete()
     {
-        menuManager?.UnlockNextLevel(currentLevel);
+        int unlocked = PlayerPrefs.GetInt("UnlockedLevel", 1);
+        int next = currentLevel + 1;
+        int maxLevel = 10;
+        if (next > unlocked && next <= maxLevel)
+        {
+            PlayerPrefs.SetInt("UnlockedLevel", next);
+            PlayerPrefs.Save();
+        }
+
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(true);
     }
 
-    public void ForceCompleteLevel()
+    void OnNextLevelPressed()
     {
-        OnCompleteLevel();
+        GameSession.showLevelsOnMenuLoad = true;
+
+        GameSession.selectedLevel = Mathf.Clamp(currentLevel + 1, 1, 10);
+
+        SceneManager.LoadScene("MenuScene");
     }
 }

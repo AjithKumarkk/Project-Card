@@ -8,6 +8,7 @@ public class GameController : MonoBehaviour
     public GridLayoutManager grid;
     public MatchManager matchManager;
     public CardPool pool;
+    public LevelManager levelManager;
 
     public ScoreManager scoreManager;
     public AudioManager audioManager;
@@ -33,57 +34,9 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
-        if (randomizeOnStart)
-            StartNewRandomGame();
-        else
-            StartNewGame();
+        if (levelManager == null)
+            levelManager = FindObjectOfType<LevelManager>();
     }
-    void PickRandomLayout(out int pickRows, out int pickCols)
-    {
-        System.Random rng = new System.Random();
-
-        int r = rng.Next(minRows, maxRows + 1);
-        int c = rng.Next(minCols, maxCols + 1);
-
-        if (r * c > maxTotalCells)
-        {
-            while (r * c > maxTotalCells && c > minCols) c--;
-            while (r * c > maxTotalCells && r > minRows) r--;
-        }
-
-        if ((r * c) % 2 != 0)
-        {
-            if (c > minCols) c--;
-            else if (r > minRows) r--;
-            else
-            {
-                if (c < maxCols) c++;
-                else if (r < maxRows) r++;
-            }
-        }
-
-        r = Mathf.Clamp(r, minRows, maxRows);
-        c = Mathf.Clamp(c, minCols, maxCols);
-        if ((r * c) % 2 != 0)
-        {
-            c = Mathf.Max(minCols, c - 1);
-        }
-
-        pickRows = r;
-        pickCols = c;
-    }
-
-    public void StartNewRandomGame()
-    {
-        int r, c;
-        PickRandomLayout(out r, out c);
-
-        rows = r;
-        cols = c;
-
-        StartNewGame();
-    }
-
 
     public void StartNewGame()
     {
@@ -93,7 +46,21 @@ public class GameController : MonoBehaviour
         matchManager.ResetAll();
         scoreManager?.ResetScore();
 
-        grid.MakeGrid(rows, cols, seed);
+        matchManager.OnPairResolved = null;
+        matchManager.OnPairResolved = OnPairResolved;
+
+        UpdateScoreUI();
+        UpdatePairsText();
+    }
+
+    public void OnGridReady()
+    {
+        if (levelManager == null)
+            levelManager = FindObjectOfType<LevelManager>();
+
+        totalPairs = (grid.ActiveCards.Count) / 2;
+        matched = 0;
+        scoreManager?.ResetScore();
 
         matchManager.OnPairResolved = null;
         matchManager.OnPairResolved = OnPairResolved;
@@ -104,16 +71,10 @@ public class GameController : MonoBehaviour
             card.OnHidden = null;
             card.OnMatched = null;
 
-
             var et = card.GetComponent<EventTrigger>();
             if (et != null) et.enabled = false;
 
-            card.OnRevealed += (c) =>
-            {
-                matchManager.EnqueueWhenRevealed(c);
-                audioManager?.PlayFlip();
-            };
-
+            card.OnMatched += (c) => { };
         }
 
         StartCoroutine(PreviewFlipRoutine());
@@ -140,38 +101,32 @@ public class GameController : MonoBehaviour
         if (matched >= totalPairs)
         {
             audioManager?.PlayGameComplete();
+            if (levelManager == null)
+                levelManager = FindObjectOfType<LevelManager>();
+            levelManager?.HandleLevelComplete();
         }
     }
 
     IEnumerator PreviewFlipRoutine()
     {
-        // 1) Reveal all cards
-        foreach (var card in grid.ActiveCards)
-        {
-            card.Reveal();
-        }
-
-        // 2) Wait for preview time
+        foreach (var card in grid.ActiveCards) card.Reveal();
         yield return new WaitForSeconds(previewSeconds);
-
-        // 3) Hide all cards
-        foreach (var card in grid.ActiveCards)
-        {
-            card.Hide();
-        }
-
-        // 4) Wait a bit for hide animations to finish
+        foreach (var card in grid.ActiveCards) card.Hide();
         yield return new WaitForSeconds(0.25f);
 
-        // 5) Re-enable EventTriggers 
         foreach (var card in grid.ActiveCards)
         {
-            var et = card.GetComponent<EventTrigger>();
+            var c = card;
+            c.OnRevealed += (revealedCard) =>
+            {
+                matchManager.EnqueueWhenRevealed(revealedCard);
+                audioManager?.PlayFlip();
+            };
+
+            var et = c.GetComponent<EventTrigger>();
             if (et != null) et.enabled = true;
         }
-
         matchManager.ResetAll();
-
     }
 
     void UpdateScoreUI()

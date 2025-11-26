@@ -1,96 +1,123 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class MenuManager : MonoBehaviour
 {
-    [Header("Canvases")]
-    public GameObject menuCanvas;
-    public GameObject mainCanvas;
+    [Header("Canvas groups")]
     public CanvasGroup menuGroup;
     public CanvasGroup gameGroup;
-
     [Header("Menu UI")]
+    public GameObject startButtonGO;
     public Button startButton;
+    public GameObject levelsParent;
     public Button[] levelButtons;
 
     const string UNLOCK_KEY = "UnlockedLevel";
     const int DEFAULT_UNLOCKED = 1;
 
-    private void Awake()
+    void Awake()
     {
-        // Ensure there's always at least level 1 unlocked
         if (!PlayerPrefs.HasKey(UNLOCK_KEY))
             PlayerPrefs.SetInt(UNLOCK_KEY, DEFAULT_UNLOCKED);
+
+        if (menuGroup != null)
+        {
+            menuGroup.alpha = 1f;
+            menuGroup.interactable = true;
+            menuGroup.blocksRaycasts = true;
+        }
+
+        if (GameSession.showLevelsOnMenuLoad)
+        {
+            ShowMenuWithLevels();
+            GameSession.showLevelsOnMenuLoad = false; 
+        }
+        else
+        {
+            ShowMenuInitialState();
+        }
     }
 
     void Start()
     {
-        ShowMenu();
-        // Start button opens level 1
-        startButton.onClick.RemoveAllListeners();
-        startButton.onClick.AddListener(() =>
+        if (startButton != null)
         {
-            OnLevelSelected(1);
-        });
-    }
-    public void ShowMenu()
-    {
-        menuGroup.alpha = 1; menuGroup.interactable = true; menuGroup.blocksRaycasts = true;
-        gameGroup.alpha = 0; gameGroup.interactable = false; gameGroup.blocksRaycasts = false;
+            startButton.onClick.RemoveAllListeners();
+            startButton.onClick.AddListener(OnStartPressed);
+        }
+
+        RefreshLevelButtons();
     }
 
-    public void ShowGame()
+    void ShowMenuInitialState()
     {
-        menuGroup.alpha = 0; menuGroup.interactable = false; menuGroup.blocksRaycasts = false;
-        gameGroup.alpha = 1; gameGroup.interactable = true; gameGroup.blocksRaycasts = true;
+        if (menuGroup != null)
+        {
+            menuGroup.alpha = 1f;
+            menuGroup.interactable = true;
+            menuGroup.blocksRaycasts = true;
+        }
+
+        if (startButtonGO != null) startButtonGO.SetActive(true);
+        if (levelsParent != null) levelsParent.SetActive(false);
     }
+
+    public void ShowMenuWithLevels()
+    {
+        if (menuGroup != null)
+        {
+            menuGroup.alpha = 1f;
+            menuGroup.interactable = true;
+            menuGroup.blocksRaycasts = true;
+        }
+
+        if (startButtonGO != null) startButtonGO.SetActive(false);
+        if (levelsParent != null) levelsParent.SetActive(true);
+
+        RefreshLevelButtons();
+    }
+
+    public void OnStartPressed()
+    {
+        if (startButtonGO != null) startButtonGO.SetActive(false);
+        if (levelsParent != null) levelsParent.SetActive(true);
+        RefreshLevelButtons();
+    }
+
     public void RefreshLevelButtons()
     {
         int unlocked = PlayerPrefs.GetInt(UNLOCK_KEY, DEFAULT_UNLOCKED);
-
         for (int i = 0; i < levelButtons.Length; i++)
         {
             int levelNumber = i + 1;
-            if (levelButtons[i] != null)
-            {
-                levelButtons[i].interactable = (levelNumber <= unlocked);
+            var btn = levelButtons[i];
+            if (btn == null) continue;
+            btn.interactable = (levelNumber <= unlocked);
 
-                levelButtons[i].onClick.RemoveAllListeners();
-                int captured = levelNumber;
-                levelButtons[i].onClick.AddListener(() => OnLevelSelected(captured));
-            }
+            btn.onClick.RemoveAllListeners();
+            int captured = levelNumber;
+            btn.onClick.AddListener(() => OnLevelChosen(captured));
         }
     }
 
-    public void OnLevelSelected(int level)
+    void OnLevelChosen(int level)
     {
-        // hide menu, show game
-        ShowGame();
+        GameSession.selectedLevel = level;
 
-        // tell LevelManager to start the level
-        var lm = FindObjectOfType<LevelManager>();
-        if (lm != null) lm.StartLevel(level);
+        GameSession.showLevelsOnMenuLoad = false;
+
+        SceneManager.LoadScene("GameScene");
     }
 
     public void UnlockNextLevel(int completedLevel)
     {
         int unlocked = PlayerPrefs.GetInt(UNLOCK_KEY, DEFAULT_UNLOCKED);
         int next = completedLevel + 1;
-        if (next > unlocked)
+        if (next > unlocked && next <= levelButtons.Length)
         {
-            if (next <= levelButtons.Length)
-            {
-                PlayerPrefs.SetInt(UNLOCK_KEY, next);
-                PlayerPrefs.Save();
-            }
+            PlayerPrefs.SetInt(UNLOCK_KEY, next);
+            PlayerPrefs.Save();
         }
-        RefreshLevelButtons();
-    }
-
-    public void ReturnToMenu()
-    {
-        if (mainCanvas != null) mainCanvas.SetActive(false);
-        if (menuCanvas != null) menuCanvas.SetActive(true);
-        RefreshLevelButtons();
     }
 }

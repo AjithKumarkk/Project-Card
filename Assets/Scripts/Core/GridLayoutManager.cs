@@ -22,7 +22,7 @@ public class GridLayoutManager : MonoBehaviour
         active.Clear();
 
         int total = rows * cols;
-        if (total % 2 != 0) total -= 1; 
+        if (total % 2 != 0) total -= 1;
 
         List<int> ids = new List<int>();
         int pairs = total / 2;
@@ -56,6 +56,7 @@ public class GridLayoutManager : MonoBehaviour
                 if (idx >= ids.Count) break;
                 var card = pool.Get();
                 card.transform.SetParent(container, false);
+                card.gameObject.SetActive(true); // newly spawned cards from pool may still be inactive
 
                 RectTransform rt = card.GetComponent<RectTransform>();
                 rt.sizeDelta = new Vector2(size, size);
@@ -76,9 +77,20 @@ public class GridLayoutManager : MonoBehaviour
         }
     }
 
-    public void Clear()
+    public void ClearGrid()
     {
-        if (pool != null) pool.ReturnAll(active);
-        active.Clear();
+        if (ActiveCards == null || ActiveCards.Count == 0)
+            return;
+
+        foreach (var card in ActiveCards)
+        {
+            if (card != null)
+            {
+                pool.Return(card);
+            }
+        }
+        ActiveCards.Clear();
+        Canvas.ForceUpdateCanvases();
     }
+
 }
